@@ -18,6 +18,8 @@ from tueplots import bundles, figsizes
 from typing import Tuple, Dict, Any
 from typing import List
 import torch.nn as nn
+import json
+
 
 # Local
 from .custom_loggers import CustomMLFlowLogger
@@ -722,3 +724,45 @@ def get_integer_time(tdelta) -> tuple[int, str]:
             return int(total_seconds / unit_in_seconds), unit
 
     return 1, "unknown"
+
+def export_graph(graph: dict, save_dir: str) -> None:
+    """
+    Export graph structure (edges, features, nodes) to a JSON file
+    for easier debugging and inspection.
+
+    Parameters
+    ----------
+    graph : dict
+        Graph dictionary returned from `load_graph`.
+    save_dir : str
+        Directory where the exported graph will be saved.
+
+    Notes
+    -----
+    - Converts PyTorch tensors to Python lists for JSON serialization.
+    - Supports nested lists of tensors.
+    """
+
+    os.makedirs(save_dir, exist_ok=True)
+
+    export_data = {}
+
+    for key, value in graph.items():
+        if isinstance(value, torch.Tensor):
+            export_data[key] = value.tolist()
+
+        elif isinstance(value, list):
+            export_data[key] = [
+                v.tolist() if isinstance(v, torch.Tensor) else v
+                for v in value
+            ]
+
+        else:
+            export_data[key] = value
+
+    output_path = os.path.join(save_dir, "graph_dump.json")
+
+    with open(output_path, "w") as f:
+        json.dump(export_data, f, indent=2)
+
+    print(f"[INFO] Graph exported successfully to: {output_path}")
